@@ -2,11 +2,14 @@ package kr.greedyeater.address;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.prefs.Preferences;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 
 import javafx.application.Application;
 import javafx.collections.FXCollections;
@@ -178,7 +181,13 @@ public class MainApp extends Application {
 	 * @return
 	 */
 	public File getPersonFilePath() {
+		// Returns the preference node from the calling user's preference tree 
+		// that is associated (by convention) with the specified class's package.
+		// -> 클래스와 관련된 Preference 노드를 리턴한다. (Preference Tree를 내부적으로 가지고 있음)
 	    Preferences prefs = Preferences.userNodeForPackage(MainApp.class);
+	    
+	    // Returns the value associated with the specified key in this preference node. 
+	    // Preference Node 의 get 메서드를 이용해서 filePath 라는 이름의  속성의 데이터를 반환한다.
 	    String filePath = prefs.get("filePath", null);
 	    if (filePath != null) {
 	        return new File(filePath);
@@ -215,19 +224,43 @@ public class MainApp extends Application {
 	 */
 	public void loadPersonDataFromFile(File file) {
 	    try {
+	    	// The JAXBContext class provides the client's entry point to the JAXB API.
+	    	// client 에게 entry point 를 제공한다. 
 	        JAXBContext context = JAXBContext
+	        		// The client application must supply a list of classes that the new context object needs to recognize.
+	        		/*
+	        		 * @XmlRootElement(name ="persons") // Defines the name of the root element.
+	        		 * public class PersonListWrapper {
+	        		 * 	private List<Person> persons;
+	        		 * 		@XmlElement(name = "person") // is an optional name we can specify for the element
+	        		 * 		public List<Person> getPersons(){
+	        		 * 			return persons;
+	        		 * 		}
+	        		 * 		
+	        		 * 		public void setPersons(List<Person> persons){
+	        		 * 			this.persons = persons;
+	        		 * 		}
+	        		 * }
+	        		 * 위와 같은 형태로 정의를 한 뒤에 아래의 구문에서 정의한 클래스의 Definition 을 전달한다.  
+	        		 */
 	                .newInstance(PersonListWrapper.class);
+	        // 추출한 context 를 통해 Unmarshaller 객체를 생성한다. 
+	        // Create an Unmarshaller object that can be used to convert XML data into a java content tree.
 	        Unmarshaller um = context.createUnmarshaller();
-
+	        
 	        // Reading XML from the file and unmarshalling.
 	        PersonListWrapper wrapper = (PersonListWrapper) um.unmarshal(file);
-
+	        
+	        // Removes all of the elements from this list (optional operation). 
+	        // The list will be empty after this call returns.
 	        personData.clear();
+	        // Appends all of the elements in the specified collection to the end of this list, 
+	        // in the order that they are returned by the specified collection's iterator (optional operation). 
 	        personData.addAll(wrapper.getPersons());
-
+	        
 	        // Save the file path to the registry.
 	        setPersonFilePath(file);
-
+	        
 	    } catch (Exception e) { // catches ANY exception
 	        Alert alert = new Alert(AlertType.ERROR);
 	        alert.setTitle("Error");
@@ -247,13 +280,21 @@ public class MainApp extends Application {
 	    try {
 	        JAXBContext context = JAXBContext
 	                .newInstance(PersonListWrapper.class);
+	        // Appends all of the elements in the specified collection to the end of this list, 
+	        // in the order that they are returned by the specified collection's iterator (optional operation). 
 	        Marshaller m = context.createMarshaller();
+	        
+	        // Set the particular property in the underlying implementation of Marshaller.
+	        // This method can only be used to set one of the standard JAXB defined properties 
+	        // above or a provider specific property.
+	        // Marshaller 객체의 Property 를 설정하는 구문이고, 현재 설정을 추가하는 부분은 
+	        // linefeed 와 indentation 을 Marshalling 시에 반영하라는 의미이다. 
 	        m.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
 
 	        // Wrapping our person data.
 	        PersonListWrapper wrapper = new PersonListWrapper();
 	        wrapper.setPersons(personData);
-
+	        
 	        // Marshalling and saving XML to the file.
 	        m.marshal(wrapper, file);
 
